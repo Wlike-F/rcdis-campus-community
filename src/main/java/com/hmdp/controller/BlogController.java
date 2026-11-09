@@ -55,7 +55,7 @@ public class BlogController {
         UserDTO user = UserHolder.getUser();
         // 根据用户查询
         Page<Blog> page = blogService.query()
-                .eq("user_id", user.getId()).page(new Page<>(current, SystemConstants.MAX_PAGE_SIZE));
+                .eq("user_id", user.getId()).orderByDesc("create_time", "id").page(new Page<>(current, SystemConstants.MAX_PAGE_SIZE));
         // 获取当前页数据
         List<Blog> records = page.getRecords();
         return Result.ok(records);
@@ -64,6 +64,12 @@ public class BlogController {
     @GetMapping("/hot")
     public Result queryHotBlog(@RequestParam(value = "current", defaultValue = "1") Integer current) {
         return blogService.queryHotBlog(current);
+    }
+
+    @GetMapping("/community")
+    public Result queryCommunityBlogs(@RequestParam(value = "current", defaultValue = "1") Integer current,
+                                      @RequestParam(value = "topic", required = false) String topic) {
+        return blogService.queryCommunityBlogs(current, topic);
     }
 
     /**

@@ -15,6 +15,7 @@ public class LoginInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        if ("GET".equals(request.getMethod()) && request.getRequestURI().matches("/blog/[0-9]+")) return true;
         // 判断要不要做拦截（ThreadLocal中是否有用户）
         if (UserHolder.getUser() == null){
             // 没有用户，拦截，返回401状态码

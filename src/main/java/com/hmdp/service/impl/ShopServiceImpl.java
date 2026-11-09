@@ -324,15 +324,26 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     }
 
     /**
+     * 检索半径兜底：为空或非法时取默认 5000 米，并限制最大 50 公里，避免无界扫描拖垮 Redis
+     */
+    private double normalizeRadius(Double radius) {
+        if (radius == null || radius <= 0) {
+            return SystemConstants.DEFAULT_SEARCH_RADIUS_M;
+        }
+        return Math.min(radius, SystemConstants.MAX_SEARCH_RADIUS_M);
+    }
+
+    /**
      * 根据类型分页查询商铺信息
      * @param typeId
      * @param current
      * @param x
      * @param y
+     * @param radius 检索半径（米），为空或非法时取默认 5000
      * @return
      */
     @Override
-    public Result queryShopByType(Integer typeId, Integer current, Double x, Double y) {
+    public Result queryShopByType(Integer typeId, Integer current, Double x, Double y, Double radius) {
         // 1. 判断是否需要根据坐标查询
         if (x == null || y == null) {
             // 不需要坐标查询，按数据库查询
@@ -348,10 +359,10 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
 
         // 3. 查询redis、按照距离排序、分页。结果：shopId、distance
         String key = RedisConstants.SHOP_GEO_KEY + typeId;
-        // GEORADIUS key x y 5000 m WITHDIST COUNT end
+        // GEORADIUS key x y radius m WITHDIST COUNT end
         GeoResults<RedisGeoCommands.GeoLocation<String>> results = redisTemplate.opsForGeo()
                 .radius(key,
-                        new Circle(new Point(x, y), new Distance(5000)),
+                        new Circle(new Point(x, y), new Distance(normalizeRadius(radius))),
                         RedisGeoCommands.GeoRadiusCommandArgs.newGeoRadiusArgs().includeDistance().limit(end));
 
         // 4. 解析出id

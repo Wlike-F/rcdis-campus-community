@@ -1,0 +1,26 @@
+-- Source: publicly listed POI samples at https://www.poilist.cn/poi-list-%E7%BE%8E%E9%A3%9F-%E6%B2%88%E9%98%B3/
+-- Source coordinates are GCJ-02; stored coordinates are approximate WGS-84 conversions.
+-- Source describes data updated in 2025-12; current operating status is not verified.
+SET NAMES utf8mb4;
+START TRANSACTION;
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '椒盐水煮鱼',1,'','公开POI·沈阳药科大学周边','文化路78甲（近小南街）',123.44296,41.768838,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='椒盐水煮鱼' AND address='文化路78甲（近小南街）');
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '川汇老娃子火锅',1,'','公开POI·沈阳药科大学周边','南塔街56号(近文化路)',123.444796,41.765146,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='川汇老娃子火锅' AND address='南塔街56号(近文化路)');
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '小二狗肉馆',1,'','公开POI·沈阳药科大学周边','文化路78号（药科大学对面）',123.441476,41.768919,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='小二狗肉馆' AND address='文化路78号（药科大学对面）');
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '福锅记柴火铁锅炖',1,'','公开POI·沈阳药科大学周边','大南街438号',123.449246,41.772082,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='福锅记柴火铁锅炖' AND address='大南街438号');
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '倪氏快餐',1,'','公开POI·沈阳药科大学周边','文化路99-3号(近沈阳药科大学)',123.43705,41.768404,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='倪氏快餐' AND address='文化路99-3号(近沈阳药科大学)');
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '美味快餐',1,'','公开POI·沈阳药科大学周边','五里河街道文萃路52号(近教育学院)',123.437257,41.762713,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='美味快餐' AND address='五里河街道文萃路52号(近教育学院)');
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '慧龙炭火烤肉店',1,'','公开POI·沈阳药科大学周边','五爱街83号1-7-4室',123.436561,41.763163,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='慧龙炭火烤肉店' AND address='五爱街83号1-7-4室');
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '锦绣江南西门烤串',1,'','公开POI·沈阳药科大学周边','天坛一街与文萃路交叉路口往北约100米(锦绣江南)',123.453883,41.762801,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='锦绣江南西门烤串' AND address='天坛一街与文萃路交叉路口往北约100米(锦绣江南)');
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '香乐美食楼',1,'','公开POI·沈阳药科大学周边','滨河街道大南街359号(近省人民医院)',123.450883,41.774593,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='香乐美食楼' AND address='滨河街道大南街359号(近省人民医院)');
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '肯德基',1,'','公开POI·沈阳药科大学周边','文艺路80号（大福源超市一层）',123.44624,41.77591,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='肯德基' AND address='文艺路80号（大福源超市一层）');
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '永和大王',1,'','公开POI·沈阳药科大学周边','文艺路80号',123.447242,41.775893,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='永和大王' AND address='文艺路80号');
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '蜀城春川味小吃楼',1,'','公开POI·沈阳药科大学周边','北文萃路16号楼',123.435231,41.764022,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='蜀城春川味小吃楼' AND address='北文萃路16号楼');
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '华莱士·全鸡汉堡',1,'','公开POI·沈阳药科大学周边','大南街343号(近大南边门)',123.45086,41.776252,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='华莱士·全鸡汉堡' AND address='大南街343号(近大南边门)');
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '老倪肉串',1,'','公开POI·沈阳药科大学周边','文艺路八十巷47-2',123.447922,41.776871,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='老倪肉串' AND address='文艺路八十巷47-2');
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '娘仨卷饼',1,'','公开POI·沈阳药科大学周边','文萃路30号',123.434398,41.762842,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='娘仨卷饼' AND address='文萃路30号');
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '小红帽串吧',1,'','公开POI·沈阳药科大学周边','五里河街道北文萃路1-1-511号(早市路南)',123.433557,41.763768,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='小红帽串吧' AND address='五里河街道北文萃路1-1-511号(早市路南)');
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '天天肥牛',1,'','公开POI·沈阳药科大学周边','文萃路22号',123.433099,41.762901,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='天天肥牛' AND address='文萃路22号');
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '小帽串店',1,'','公开POI·沈阳药科大学周边','北文萃路五里河东巷3号',123.432105,41.76378,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='小帽串店' AND address='北文萃路五里河东巷3号');
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '沈家小厨',1,'','公开POI·沈阳药科大学周边','南关路49号',123.450156,41.778177,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='沈家小厨' AND address='南关路49号');
+INSERT INTO tb_shop (name,type_id,images,area,address,x,y,sold,comments,score) SELECT '必胜客',1,'','公开POI·沈阳药科大学周边','文化路81号（近青年大街）',123.429774,41.767893,0,0,0 WHERE NOT EXISTS (SELECT 1 FROM tb_shop WHERE name='必胜客' AND address='文化路81号（近青年大街）');
+COMMIT;

@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import javax.imageio.ImageIO;
 import java.util.UUID;
 
 @Slf4j
@@ -20,8 +21,17 @@ public class UploadController {
     @PostMapping("blog")
     public Result uploadImage(@RequestParam("file") MultipartFile image) {
         try {
+            if (image.isEmpty() || image.getSize() > 5L * 1024 * 1024 || ImageIO.read(image.getInputStream()) == null) {
+                return Result.fail("图片无效或超过 5MB");
+            }
+            String mime = image.getContentType();
+            String suffix;
+            if ("image/jpeg".equals(mime)) suffix = "jpg";
+            else if ("image/png".equals(mime)) suffix = "png";
+            else if ("image/gif".equals(mime)) suffix = "gif";
+            else return Result.fail("仅支持 JPG、PNG 或 GIF 图片");
             // 获取原始文件名称
-            String originalFilename = image.getOriginalFilename();
+            String originalFilename = "image." + suffix;
             // 生成新文件名
             String fileName = createNewFileName(originalFilename);
             // 保存文件

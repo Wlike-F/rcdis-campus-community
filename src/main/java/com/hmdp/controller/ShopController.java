@@ -63,6 +63,9 @@ public class ShopController {
      * 根据商铺类型分页查询商铺信息
      * @param typeId 商铺类型
      * @param current 页码
+     * @param x 中心点经度（可选，传了才做 GEO 周边检索）
+     * @param y 中心点纬度（可选）
+     * @param radius 检索半径，单位米（可选，默认 5000，最大 50000）
      * @return 商铺列表
      */
     @GetMapping("/of/type")
@@ -70,9 +73,10 @@ public class ShopController {
             @RequestParam("typeId") Integer typeId,
             @RequestParam(value = "current", defaultValue = "1") Integer current,
             @RequestParam(value = "x", required = false) Double x,
-            @RequestParam(value = "y", required = false) Double y
+            @RequestParam(value = "y", required = false) Double y,
+            @RequestParam(value = "radius", required = false) Double radius
     ) {
-        return shopService.queryShopByType(typeId, current, x, y);
+        return shopService.queryShopByType(typeId, current, x, y, radius);
     }
 
     /**

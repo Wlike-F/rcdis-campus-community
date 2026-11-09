@@ -1,6 +1,7 @@
 package com.hmdp.config;
 
 import com.hmdp.dto.Result;
+import com.hmdp.ai.exception.AiApiException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -8,6 +9,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @Slf4j
 @RestControllerAdvice
 public class WebExceptionAdvice {
+
+    @ExceptionHandler(AiApiException.class)
+    public Result handleAiApiException(AiApiException e) {
+        log.error("AI request failed", e);
+        return Result.fail(e.getMessage());
+    }
 
     @ExceptionHandler(RuntimeException.class)
     public Result handleRuntimeException(RuntimeException e) {

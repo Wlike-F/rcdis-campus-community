@@ -9,6 +9,7 @@ import com.hmdp.entity.User;
 import com.hmdp.entity.UserInfo;
 import com.hmdp.service.IUserInfoService;
 import com.hmdp.service.IUserService;
+import com.hmdp.service.PointsService;
 import com.hmdp.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -35,6 +36,9 @@ public class UserController {
 
     @Resource
     private IUserInfoService userInfoService;
+
+    @Resource
+    private PointsService pointsService;
 
     /**
      * 发送手机验证码
@@ -107,7 +111,12 @@ public class UserController {
      */
     @PostMapping("/sign")
     public Result sign() {
-        return userService.sign();
+        return pointsService.sign();
+    }
+
+    @GetMapping("/points")
+    public Result points() {
+        return pointsService.current();
     }
 
     /**

@@ -18,5 +18,14 @@ public interface IShopService extends IService<Shop> {
 
     Result updateShop(Shop shop);
 
-    Result queryShopByType(Integer typeId, Integer current, Double x, Double y);
+    /**
+     * 按类型分页查询商铺，可选按坐标做 GEO 周边检索
+     *
+     * @param typeId  商铺类型
+     * @param current 页码
+     * @param x       中心点经度，为空则不走 GEO
+     * @param y       中心点纬度，为空则不走 GEO
+     * @param radius  检索半径（米），为空或非法时取默认值
+     */
+    Result queryShopByType(Integer typeId, Integer current, Double x, Double y, Double radius);
 }

@@ -18,6 +18,8 @@ public interface IBlogService extends IService<Blog> {
 
     Result queryHotBlog(Integer current);
 
+    Result queryCommunityBlogs(Integer current, String topic);
+
     void likeBlog(Long id);
 
     Result queryBlogLikes(Long id);
@@ -25,4 +27,10 @@ public interface IBlogService extends IService<Blog> {
     Result saveBlog(Blog blog);
 
     Result queryBlogOfFollow(Long max, Integer offset);
+
+    /**
+     * 按 DB 的点赞数重建 blog:hot 热榜 ZSet
+     * @return 写入 ZSet 的条目数
+     */
+    int rebuildHotRanking();
 }

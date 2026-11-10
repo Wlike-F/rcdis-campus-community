@@ -24,7 +24,7 @@
 ### 1. 准备数据库与配置
 
 1. 准备 MySQL 和支持 GEO、BITFIELD、Stream 的 Redis。默认配置见 `src/main/resources/application.yaml`：MySQL 为 `127.0.0.1:3306/hmdianping`，Redis 为 `127.0.0.1:6380`。根据本机环境设置数据库与 Redis 凭据。
-2. 全新数据库可参考 `src/main/resources/db/hmdp.sql` 初始化，然后根据已有表结构依次检查并执行 `community_topic.sql`、`community_visibility.sql`、`community_points.sql`、`points_shop.sql`。这些脚本并非全部可重复执行；初始化脚本包含 `DROP TABLE`，执行前请备份已有数据。
+2. 全新数据库可参考 `src/main/resources/db/hmdp.sql` 初始化，然后根据已有表结构依次检查并执行 `community_topic.sql`、`community_visibility.sql`、`community_points.sql`、`points_shop.sql`、`email_login.sql`、`shop_amap_link.sql`。这些脚本并非全部可重复执行；初始化脚本包含 `DROP TABLE`，执行前请备份已有数据。
 3. 商户 GEO 数据需要与数据库商户坐标保持一致；`geo_relocate_shenyang.sql` 会修改位置数据，使用前先阅读脚本并确认适用范围。
 4. 图片上传目录当前在 `SystemConstants.IMAGE_UPLOAD_DIR` 中配置为 `D:\hm\nginx-1.18.0\html\hmdp\imgs\`，部署到其他路径时需调整，并配置静态图片访问。单文件上限 5 MB、请求上限 6 MB，反向代理也需允许相应大小。
 5. 需要使用 AI 时，在启动后端的环境中设置 `SENSENOVA_API_KEY`；可通过 `SENSENOVA_API_BASE_URL` 覆盖默认 API 地址。不要将密钥写入仓库。
@@ -56,7 +56,9 @@ npm run dev
 
 按 Vite 终端输出的地址访问；开发服务器将 `/api` 转发至 `http://localhost:8081`。`npm run build` 会输出到 `../../nginx-1.18.0/html/hmdp/app`，该路径针对当前本机目录布局；其他环境请先调整 `vite.config.ts`。当前 Nginx 环境的访问地址为 `http://localhost:8080/`。
 
-手机号验证码由后端生成，演示环境可在后端日志中查看；首次验证码登录会自动注册。
+支持邮箱验证码登录、邮箱密码登录和通过邮箱验证码设置或重置密码。首次邮箱验证码登录会创建独立账号，不会自动合并原有手机号账号；原手机号验证码登录入口保留，验证码仍在后端日志中查看。
+
+邮箱发信默认使用 `wlikef5213@163.com` 的 SMTP 服务。请在 163 邮箱开启 SMTP 并生成客户端授权码，在启动后端的环境中设置 `MAIL_AUTH_CODE`，然后重启后端；如需更换发信账号，可设置 `MAIL_USERNAME`。授权码不要写入仓库或聊天记录。验证码有效期为 5 分钟，成功验证后失效。
 
 ## AI 与 MCP
 

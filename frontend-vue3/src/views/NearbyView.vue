@@ -1,101 +1,62 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { Location, Search, ArrowRight } from '@element-plus/icons-vue'
+import { Location, Search } from '@element-plus/icons-vue'
+import CampusMap from '../components/CampusMap.vue'
 import { communityApi } from '../services/api'
-import type { Shop, ShopType } from '../types/api'
-import { currentLocation, currentLocationLabel, selectedCampus, setCurrentLocation } from '../services/campus'
-import { foodIllustration, isPublicPoi } from '../services/shopSource'
+import type { MapPlace } from '../services/api'
+import type { ShopType } from '../types/api'
+import { currentLocation, currentLocationLabel, setCurrentLocation } from '../services/campus'
 import { cityPlaces } from '../services/cityGuide'
-
 const route = useRoute()
 const types = ref<ShopType[]>([])
-const shops = ref<Shop[]>([])
-const selectedType = ref(0)
 const query = ref(String(route.query.q || ''))
+const selectedType = ref(1)
+const selectedId = ref('')
+const places = ref<MapPlace[]>([])
 const loading = ref(false)
 const error = ref('')
-const verifiedLeads = [
-  { name: '老妈麻辣烫（文化路店）', address: '文化路 113–115 号', source: 'https://www.dianping.com/shop/552814/photos/album/p3' },
-  { name: '壹个咖啡馆', address: '文化路 78 号甲 2', source: 'https://shen.fang.anjuke.com/loupan/446916/fujin-0106.html' },
-  { name: '满宝馄饨（陆军总院店）', address: '文化路 103 号附近', source: 'https://cn.tripadvisor.com/Restaurant_Review-g297454-d3466307-Reviews-Man_Bao_Wonton_LuJun_ZongYuan-Shenyang_Liaoning.html' },
-]
-let latestRequest = 0
-const center = currentLocation
-const locationLabel = currentLocationLabel
-watch(currentLocation, () => { if (types.value.length) void load() })
-function updateLocation(): void {
-  if (!navigator.geolocation) { locationLabel.value = '当前浏览器不支持定位'; return }
-  navigator.geolocation.getCurrentPosition((position) => {
-    setCurrentLocation(position.coords.longitude, position.coords.latitude)
-  }, () => { locationLabel.value = '定位失败，请检查浏览器定位权限' }, { timeout: 10000 })
-}
-const currentLabel = computed(() => types.value.find((type) => type.id === selectedType.value)?.name || '全部生活')
-function imageUrl(path: string): string {
-  const first = path?.split(',')[0]
-  if (!first) return '/city-guide.svg'
-  if (/^https?:\/\//.test(first)) return first
-  if (first.startsWith('/imgs/')) return first
-  return `/imgs${first.startsWith('/') ? '' : '/'}${first}`
-}
-
+let requestId = 0
+const title = computed(() => types.value.find((item) => item.id === selectedType.value)?.name || '附近地点')
 async function load(): Promise<void> {
-  const requestId = ++latestRequest
-  loading.value = true; error.value = ''
+  const request = ++requestId
+  loading.value = true; error.value = ''; selectedId.value = ''
+  const keyword = query.value.trim() || (selectedType.value ? title.value : '美食')
   try {
-    let result: Shop[]
-    if (query.value.trim()) {
-      result = await communityApi.searchShops(query.value.trim())
-    } else if (selectedType.value === 0) {
-      const pages = await Promise.all(types.value.flatMap((type) => (type.id === 1 ? [1, 2, 3, 4] : [1]).map((page) => communityApi.nearbyShops(type.id, page, center.value.x, center.value.y))))
-      result = pages.flat().sort((left, right) => (left.distance ?? Infinity) - (right.distance ?? Infinity))
-    } else {
-      const pageNumbers = selectedType.value === 1 ? [1, 2, 3, 4] : [1]
-      const pages = await Promise.all(pageNumbers.map((page) => communityApi.nearbyShops(selectedType.value, page, center.value.x, center.value.y)))
-      result = pages.flat()
-    }
-    if (requestId === latestRequest) shops.value = result.filter(isPublicPoi)
-  } catch {
-    if (requestId === latestRequest) { shops.value = []; error.value = '附近生活数据暂时不可用，请确认后端服务已启动。' }
-  } finally { if (requestId === latestRequest) loading.value = false }
+    const result = await communityApi.mapNearby(currentLocation.value.x, currentLocation.value.y, keyword)
+    if (request === requestId) places.value = result
+  } catch (exception) {
+    if (request === requestId) { places.value = []; error.value = exception instanceof Error ? exception.message : '附近地点加载失败，请重试。' }
+  } finally { if (request === requestId) loading.value = false }
 }
-
+function chooseType(id: number): void { selectedType.value = id; query.value = ''; void load() }
+function selectPlace(id: string): void {
+  selectedId.value = id
+  void nextTick(() => document.getElementById(`place-${id}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }))
+}
+function updateLocation(): void {
+  if (!navigator.geolocation) { currentLocationLabel.value = '当前浏览器不支持定位'; return }
+  navigator.geolocation.getCurrentPosition((position) => setCurrentLocation(position.coords.longitude, position.coords.latitude), () => { currentLocationLabel.value = '定位失败，请检查浏览器定位权限' }, { timeout: 10000 })
+}
 onMounted(async () => {
-  try {
-    types.value = await communityApi.shopTypes()
-    const typeId = Number(route.query.typeId)
-    selectedType.value = Number.isFinite(typeId) ? typeId : types.value[0]?.id || 0
-    await load()
-  } catch { error.value = '无法读取商户分类，请稍后重试。' }
+  try { types.value = await communityApi.shopTypes() } catch { error.value = '商户分类加载失败，请刷新页面。' }
+  const id = Number(route.query.typeId)
+  selectedType.value = Number.isSafeInteger(id) && id > 0 ? id : 1
+  await load()
 })
-watch(() => route.query.q, (value) => { query.value = String(value || ''); if (types.value.length) load() })
-watch(() => route.query.typeId, (value) => {
-  const id = Number(value)
-  selectedType.value = Number.isSafeInteger(id) && id > 0 ? id : 0
-  query.value = ''
-  if (types.value.length) void load()
-})
+watch(currentLocation, () => { void load() })
+watch(() => route.query.q, (value) => { query.value = String(value || ''); selectedType.value = 0; void load() })
+watch(() => route.query.typeId, (value) => { const id = Number(value); selectedType.value = Number.isSafeInteger(id) && id > 0 ? id : 0; query.value = ''; void load() })
 </script>
-
 <template>
-  <div class="nearby-view">
-    <div class="nearby-heading"><div><div class="section-kicker">CAMPUS LIFE, AROUND YOU</div><h1 class="section-title">在沈阳药科大学附近</h1><p>从熟悉的校园出发，找到下一处想去的地方。</p></div><button class="location-pill" @click="updateLocation"><el-icon><Location /></el-icon> {{ locationLabel }} · 更新位置</button></div>
-    <section class="city-guide" aria-label="沈阳城市指南"><div class="city-heading"><div><span class="section-kicker">CITY GUIDE</span><h2>发现沈阳的七个去处</h2></div><span>城市指南 · 不代表校园步行距离</span></div><div class="city-cards"><RouterLink v-for="place in cityPlaces" :key="place.id" class="city-card" :to="`/city/${place.id}`"><img :src="place.image" :alt="place.image === '/city-guide.svg' ? '沈阳城市指南插画' : place.name"><div><strong>{{place.name}}</strong><span>{{place.category}} · 查看详情 →</span></div></RouterLink></div><p class="photo-credit">图片：<a href="https://commons.wikimedia.org/wiki/File:Mukden_Palace_drone_view_5.jpg" target="_blank" rel="noopener noreferrer">故宫</a>、<a href="https://commons.wikimedia.org/wiki/File:Zhongjie_drone_view_3.jpg" target="_blank" rel="noopener noreferrer">中街</a> © Techyan，<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>；<a href="https://commons.wikimedia.org/?curid=154244625" target="_blank" rel="noopener noreferrer">张学良旧居</a>：ScareCriterion12；<a href="https://commons.wikimedia.org/?curid=155034959" target="_blank" rel="noopener noreferrer">青年公园</a>：E2568，均为 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener noreferrer">CC0</a>。其余为城市插画。</p></section>
-    <section v-if="selectedCampus.id === 'shenyang'" class="local-leads"><strong>校本部周边线索</strong><p>依据公开页面整理，营业状态和地址可能变化，请出行前核实。</p><a v-for="lead in verifiedLeads" :key="lead.name" :href="lead.source" target="_blank" rel="noopener noreferrer">{{lead.name}} · {{lead.address}} ↗</a></section>
-    <div class="search-row"><el-input v-model="query" size="large" placeholder="搜咖啡、食堂、书店…" @keyup.enter="load"><template #prefix><el-icon><Search /></el-icon></template></el-input><el-button type="primary" size="large" @click="load">搜索</el-button></div>
-    <div class="type-tabs"><button :class="{active:selectedType===0}" @click="selectedType=0;query='';load()">全部</button><button v-for="type in types" :key="type.id" :class="{active:selectedType===type.id}" @click="selectedType=type.id;query='';load()">{{type.name}}</button></div>
-    <div class="result-heading"><h2>{{ currentLabel }} <small>公开地图资料，营业状态请事先核实</small></h2><span>位置为近似值</span></div>
-    <el-alert v-if="error" :title="error" type="warning" :closable="false" show-icon />
-    <div v-else-if="loading" class="shop-grid"><el-skeleton v-for="i in 4" :key="i" animated><template #template><el-skeleton-item variant="image" style="height:200px"/><el-skeleton-item variant="h3" style="margin-top:12px"/></template></el-skeleton></div>
-    <div v-else class="shop-grid"><RouterLink v-for="shop in shops" :key="shop.id" :to="`/shop/${shop.id}`" class="shop-card"><div class="shop-image"><img :src="shop.images ? imageUrl(shop.images) : foodIllustration(shop).image" :alt="shop.images ? shop.name : '示意图'" @error="($event.target as HTMLImageElement).src='/city-guide.svg'"><span v-if="!shop.images" class="distance">{{ shop.typeId === 1 ? '菜品示意' : '城市插画' }} · 非本店实拍</span></div><div class="shop-copy"><div class="shop-name-row"><h3>{{shop.name}}</h3></div><p>{{shop.address}}</p><div class="shop-foot"><span>{{ shop.distance != null ? `直线约 ${Math.round(shop.distance)} 米` : '公开地图资料' }}</span><span>查看详情 →</span></div></div></RouterLink><el-empty v-if="!shops.length" description="暂时没有找到合适的地点" /></div>
-    <RouterLink class="assistant-link" to="/assistant">不知道去哪？让 AI 按你的预算和时间推荐 <el-icon><ArrowRight /></el-icon></RouterLink>
+  <div class="nearby">
+    <header class="heading"><div><span class="eyebrow">校园周边</span><h1>发现附近的好去处</h1><p>从校园出发，看看身边有什么。</p></div><button class="location" @click="updateLocation"><el-icon><Location /></el-icon>{{currentLocationLabel}} <span>更新位置</span></button></header>
+    <form class="search" @submit.prevent="load"><el-icon><Search /></el-icon><input v-model="query" maxlength="40" aria-label="搜索附近商户或地点" placeholder="搜索店铺、咖啡、书店…"><button :disabled="loading">{{loading ? '搜索中…' : '搜索附近'}}</button></form>
+    <nav class="categories" aria-label="地点分类"><button v-for="type in types" :key="type.id" :class="{active: selectedType === type.id}" @click="chooseType(type.id)">{{type.name}}</button></nav>
+    <div class="discovery"><section class="results" aria-label="附近地点列表"><div class="results-head"><div><h2>{{query.trim() ? `“${query.trim()}”的结果` : title}}</h2><p>高德地图地点 · 已关联商户可查看社区内容</p></div><span v-if="!loading && !error">{{places.length}} 个地点</span></div><div v-if="error" class="message" role="alert">{{error}} <button @click="load">重试</button></div><div v-else-if="loading" class="message">正在查找附近地点…</div><div v-else-if="!places.length" class="message">暂时没有找到相关地点，试试其他关键词。</div><div v-else class="place-list"><article v-for="(place,index) in places" :id="`place-${place.id}`" :key="place.id" class="place" :class="{selected: selectedId === place.id}" @click="selectPlace(place.id)"><button class="number" :aria-label="`在地图查看${place.name}`" @click.stop="selectPlace(place.id)">{{index + 1}}</button><div class="place-body"><div class="place-title"><strong>{{place.name}}</strong><span :class="{community: place.shopId}">{{place.shopId ? '社区商户' : '高德地点'}}</span></div><p>{{place.address}}</p><div class="place-foot"><span>{{place.distance ? `直线约 ${place.distance} 米` : '距离暂不可用'}}</span><RouterLink :to="place.shopId ? `/shop/${place.shopId}` : `/place/${place.id}`">查看详情 →</RouterLink></div></div></article></div></section><section class="map-panel" aria-label="附近地点地图"><CampusMap :x="currentLocation.x" :y="currentLocation.y" :places="places" :selected-id="selectedId" @select="selectPlace"/><p>位置与距离为近似值，营业状态请出行前确认。</p></section></div>
+    <section class="city"><div class="city-head"><div><span class="eyebrow">城市指南</span><h2>再远一点，逛逛沈阳</h2></div><span>地点不代表校园步行距离</span></div><div class="city-list"><RouterLink v-for="place in cityPlaces" :key="place.id" :to="`/city/${place.id}`"><img :src="place.image" :alt="place.image === '/city-guide.svg' ? '城市插画' : place.name"><strong>{{place.name}}</strong><small>{{place.category}}</small></RouterLink></div><p class="credits">图片：<a href="https://commons.wikimedia.org/wiki/File:Mukden_Palace_drone_view_5.jpg" target="_blank" rel="noopener noreferrer">故宫</a>、<a href="https://commons.wikimedia.org/wiki/File:Zhongjie_drone_view_3.jpg" target="_blank" rel="noopener noreferrer">中街</a> © Techyan，<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>；<a href="https://commons.wikimedia.org/?curid=154244625" target="_blank" rel="noopener noreferrer">张学良旧居</a>：ScareCriterion12；<a href="https://commons.wikimedia.org/?curid=155034959" target="_blank" rel="noopener noreferrer">青年公园</a>：E2568，均为 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener noreferrer">CC0</a>；其余为城市插画。</p></section>
   </div>
 </template>
-
 <style scoped>
-.city-guide{margin:0 0 32px}.city-heading{display:flex;align-items:end;justify-content:space-between;gap:15px;margin-bottom:14px}.city-heading h2{font-size:20px;margin:7px 0 0}.city-heading>span{font-size:11px;color:#929c8f}.city-cards{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(155px,1fr);gap:13px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x proximity}.city-card{min-width:0;background:#fbfaf7;scroll-snap-align:start}.city-card img{display:block;width:100%;height:120px;object-fit:cover;background:#e9ece3;transition:opacity .2s}.city-card:hover img{opacity:.84}.city-card div{display:flex;flex-direction:column;gap:6px;padding:11px 12px}.city-card strong{font-size:13px;color:#3c5141;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.city-card span{font-size:10px;color:#95a093}.photo-credit{font-size:10px;color:#a0aa9c;line-height:1.7;margin:9px 0 0}.photo-credit a{text-decoration:underline;text-underline-offset:2px}@media(max-width:700px){.city-guide{margin-bottom:25px}.city-heading{align-items:start;flex-direction:column;gap:5px}.city-heading h2{font-size:18px}.city-heading>span{font-size:10px}.city-cards{grid-auto-columns:142px;margin-right:-16px}.city-card img{height:96px}}
-.local-leads{background:#edf0e8;padding:18px 20px;margin:0 0 20px;color:#36543d}.local-leads p{font-size:12px;color:#717b70}.local-leads a{display:inline-block;margin:5px 18px 5px 0;font-size:13px;text-decoration:underline;text-underline-offset:3px}
-.nearby-heading{display:flex;justify-content:space-between;align-items:end;margin-bottom:25px}.nearby-heading p{margin:9px 0 0;color:#85877f;font-size:14px}.location-pill{display:flex;align-items:center;gap:7px;font-size:12px;background:#e9ece3;color:#486451;padding:10px 13px}.search-row{display:flex;gap:10px;max-width:700px}.search-row .el-input{flex:1}.search-row .el-input__wrapper{box-shadow:0 0 0 1px #e3e1d9 inset}.search-row .el-button{--el-color-primary:#264b3c}.type-tabs{display:flex;gap:10px;overflow:auto;padding:24px 0 20px;border-bottom:1px solid var(--line)}.type-tabs button{white-space:nowrap;padding:8px 14px;border:1px solid transparent;background:transparent;color:#757970;cursor:pointer}.type-tabs button.active{border-color:#264b3c;background:#264b3c;color:#fff}.result-heading{display:flex;justify-content:space-between;align-items:center;margin:25px 0 18px}.result-heading h2{font-size:19px;margin:0;font-weight:600}.result-heading small{font-size:12px;color:#85877f;font-weight:400;margin-left:8px}.result-heading>span{font-size:12px;color:#85877f}.shop-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.shop-card{background:#fbfaf7}.shop-image{height:220px;position:relative;overflow:hidden;background:#e6e5de}.shop-image img{width:100%;height:100%;object-fit:cover}.distance{position:absolute;left:12px;bottom:12px;background:rgba(251,250,247,.92);padding:6px 9px;font-size:11px;color:#264b3c}.shop-copy{padding:15px 17px}.shop-name-row{display:flex;justify-content:space-between;align-items:center}.shop-name-row h3{margin:0;font-size:16px;font-weight:600}.score{font-size:12px;color:#a96d35}.shop-copy p{margin:8px 0;color:#85877f;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.shop-foot{display:flex;justify-content:space-between;color:#687068;font-size:12px;margin-top:13px}.assistant-link{display:flex;justify-content:center;align-items:center;gap:8px;color:#486451;padding:24px;font-size:13px}@media(max-width:700px){.nearby-heading{align-items:flex-start;gap:15px;flex-direction:column}.location-pill{padding:8px 10px}.shop-grid{grid-template-columns:1fr}.shop-image{height:210px}.search-row .el-button{padding:0 15px}}
-
-.nearby-heading h1{color:#242825;letter-spacing:-.025em}.location-pill{border:1px solid #e3e9e4;border-radius:24px;background:#f0f5f1;color:#315c4b}.city-card{background:#fff;border:1px solid #e9ebe8;border-radius:12px;overflow:hidden}.city-card strong{color:#252c27}.city-card span,.city-heading>span{color:#737b75}.city-card img{height:120px}.local-leads{background:#edf4ef;border-radius:12px}.type-tabs{gap:8px}.type-tabs button{border-radius:22px;color:#626b64}.type-tabs button.active{background:#315c4b;border-color:#315c4b}.search-row .el-button{--el-color-primary:#315c4b}.shop-grid{gap:22px}.shop-card{background:#fff;border:1px solid #ebedea;border-radius:14px;overflow:hidden;transition:box-shadow .18s,transform .18s}.shop-card:hover{box-shadow:0 8px 24px #253e3012;transform:translateY(-2px)}.shop-image{border-radius:12px 12px 0 0}.shop-copy{padding:17px 18px 19px}.shop-name-row h3{color:#252c27}.shop-copy p,.shop-foot{color:#737b75}.distance{border-radius:6px;color:#315c4b}.assistant-link{color:#315c4b}@media(prefers-reduced-motion:reduce){.shop-card{transition:none}}
+.nearby{max-width:1120px;margin:auto;color:#27362b}.heading{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:24px}.eyebrow{font-size:12px;color:#698774}.heading h1{font-size:30px;letter-spacing:-.03em;margin:8px 0}.heading p,.results-head p{font-size:13px;color:#829087;margin:0}.location{border:1px solid #e1e9e1;background:#fff;color:#566f5e;border-radius:22px;padding:10px 13px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:7px}.location span{color:#315c4b}.search{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #dfe7df;border-radius:12px;padding:7px 8px 7px 16px}.search .el-icon{font-size:18px;color:#829489}.search input{flex:1;min-width:0;border:0;outline:0;font:inherit;font-size:14px;background:transparent}.search button{border:0;border-radius:8px;background:#315c4b;color:#fff;padding:11px 19px;cursor:pointer}.search button:disabled{opacity:.6}.categories{display:flex;overflow-x:auto;gap:8px;margin:20px 0}.categories button{white-space:nowrap;border:1px solid #e1e8e1;border-radius:20px;background:#fff;padding:8px 13px;color:#65746a;font-size:12px;cursor:pointer}.categories button.active{background:#315c4b;border-color:#315c4b;color:#fff}.discovery{display:grid;grid-template-columns:minmax(320px,.85fr) minmax(0,1.15fr);gap:18px;align-items:start}.results,.map-panel{background:#fff;border:1px solid #e7ece7;border-radius:14px}.results{overflow:hidden}.results-head{padding:22px;display:flex;justify-content:space-between;gap:12px;align-items:start}.results-head h2{font-size:18px;margin:0 0 7px}.results-head p{font-size:11px;line-height:1.6}.results-head>span{font-size:11px;color:#8b998e;white-space:nowrap}.place-list{max-height:510px;overflow:auto;border-top:1px solid #eef1ee}.place{display:flex;gap:12px;padding:17px 20px;border-bottom:1px solid #f0f2f0;cursor:pointer}.place.selected{background:#eff6f0}.number{width:30px;height:30px;border:0;border-radius:9px;background:#e6f0e8;color:#416b4e;font-weight:600;cursor:pointer;flex:none}.place.selected .number{background:#315c4b;color:#fff}.place-body{flex:1;min-width:0}.place-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.place-title strong{font-size:14px;color:#28392d}.place-title span{font-size:10px;background:#f0f2ef;color:#778278;padding:4px 6px;border-radius:5px}.place-title span.community{background:#e4f1e7;color:#396d48}.place p{font-size:12px;line-height:1.5;color:#87948a;margin:8px 0}.place-foot{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#8c9990}.place-foot a{color:#315c4b;white-space:nowrap}.message{padding:40px 22px;color:#849188;font-size:13px;line-height:1.7}.message button{background:none;border:0;color:#315c4b;cursor:pointer}.map-panel{padding:0 10px 12px;position:sticky;top:95px}.map-panel :deep(.map-shell){margin-top:10px}.map-panel :deep(.map-canvas){height:500px}.map-panel p{color:#97a299;font-size:11px;margin:10px}.city{margin-top:52px}.city-head{display:flex;align-items:end;justify-content:space-between;gap:12px}.city-head h2{font-size:21px;margin:7px 0 15px}.city-head>span{font-size:11px;color:#8d9a8f;margin-bottom:15px}.city-list{display:grid;grid-auto-flow:column;grid-auto-columns:155px;gap:12px;overflow:auto}.city-list a{display:flex;flex-direction:column;gap:6px;font-size:13px}.city-list img{width:100%;height:105px;object-fit:cover;border-radius:9px}.city-list small{color:#8a978d;font-size:11px}.credits{font-size:10px;color:#9aa49c;line-height:1.7}.credits a{text-decoration:underline}@media(max-width:760px){.heading{align-items:start;flex-direction:column;gap:14px}.heading h1{font-size:25px}.location{max-width:100%}.discovery{display:flex;flex-direction:column-reverse;gap:12px}.results,.map-panel{width:100%}.map-panel{position:static}.map-panel :deep(.map-canvas){height:250px}.place-list{max-height:none}.city{margin-top:36px}.city-head>span{max-width:110px;text-align:right}.city-list{grid-auto-columns:138px}.city-list img{height:90px}}
 </style>

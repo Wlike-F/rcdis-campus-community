@@ -9,6 +9,7 @@ export const router = createRouter({
     { path: '/nearby', component: () => import('./views/NearbyView.vue') },
     { path: '/city/:id', component: () => import('./views/CityPlaceView.vue') },
     { path: '/assistant', component: () => import('./views/AiView.vue') },
+    { path: '/place/:id', component: () => import('./views/PlaceView.vue') },
     { path: '/shop/:id', component: () => import('./views/ShopView.vue') },
     { path: '/blog/:id', component: () => import('./views/BlogView.vue') },
     { path: '/publish', component: () => import('./views/PublishView.vue') },

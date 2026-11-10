@@ -25,16 +25,29 @@ http.interceptors.response.use((response) => {
   return Promise.reject(error)
 })
 
+export interface MapShopLink { poiId: string; name: string; address: string; longitude: number; latitude: number }
+export interface MapPlace { id: string; name: string; address: string; location: string; distance: string; shopId?: number }
+
 export interface CommunityComment { id: number; name: string; content: string; createTime: string }
 
 export const communityApi = {
+  async mapShop(id: number): Promise<MapShopLink | null> { return (await http.get<ApiResult<MapShopLink | null>>(`/map/shop/${id}`)).data.data || null },
+  async mapPlace(id: string): Promise<MapPlace> { return (await http.get<ApiResult<MapPlace>>(`/map/place/${encodeURIComponent(id)}`)).data.data },
+  async shopPosts(id: number): Promise<{ id: number; title: string; createTime: string }[]> { return (await http.get<ApiResult<{ id: number; title: string; createTime: string }[]>>(`/map/shop/${id}/posts`)).data.data || [] },
+  async mapNearby(x: number, y: number, keyword: string): Promise<MapPlace[]> {
+    const response = await http.get<ApiResult<MapPlace[]>>('/map/nearby', { params: { x, y, keyword } })
+    return response.data.data || []
+  },
   async comments(blogId: number, current: number): Promise<{ items: CommunityComment[]; total: number }> {
     const response = await http.get<ApiResult<CommunityComment[]>>(`/blog-comments/list/${blogId}`, { params: { current } })
     return { items: response.data.data || [], total: response.data.total ?? 0 }
   },
   async createComment(blogId: number, content: string): Promise<void> { await http.post('/blog-comments', { blogId, content }) },
+  async claimVoucher(id: number): Promise<void> { await http.post(`/voucher-order/seckill/${id}`) },
+  async voucherClaimed(id: number): Promise<boolean> { return (await http.get<ApiResult<boolean>>(`/voucher-order/claimed/${id}`)).data.data },
   async vouchers(id: number): Promise<Voucher[]> { return (await http.get<ApiResult<Voucher[]>>(`/voucher/list/${id}`)).data.data || [] },
   async blog(id: number): Promise<Blog> { return (await http.get<ApiResult<Blog>>(`/blog/${id}`)).data.data },
+  async updateProfile(nickName: string, icon: string): Promise<User> { return (await http.put<ApiResult<User>>('/user/profile', { nickName, icon })).data.data },
   async me(): Promise<User> { return (await http.get<ApiResult<User>>('/user/me')).data.data },
   async myBlogs(): Promise<Blog[]> { return (await http.get<ApiResult<Blog[]>>('/blog/of/me', { params: { current: 1 } })).data.data || [] },
   async sign(): Promise<PointsSummary> { return (await http.post<ApiResult<PointsSummary>>('/user/sign')).data.data },

@@ -1,6 +1,17 @@
 server:
   port: 8081
 spring:
+  mail:
+    host: smtp.163.com
+    port: 465
+    username: ${MAIL_USERNAME:wlikef5213@163.com}
+    password: ${MAIL_AUTH_CODE:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.ssl.enable: true
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
   application:
     name: hmdp
   datasource:
@@ -34,3 +45,6 @@ sensenova:
   api-key: ${SENSENOVA_API_KEY:}
   max-retries: 3
   base-backoff-millis: 500
+
+amap:
+  web-key: ${AMAP_WEB_KEY:}

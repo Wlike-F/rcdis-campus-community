@@ -1,0 +1,3 @@
+ALTER TABLE tb_user MODIFY COLUMN phone VARCHAR(11) NULL;
+ALTER TABLE tb_user ADD COLUMN email VARCHAR(190) NULL AFTER phone;
+CREATE UNIQUE INDEX uk_user_email ON tb_user (email);

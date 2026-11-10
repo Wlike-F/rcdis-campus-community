@@ -11,12 +11,16 @@ import com.hmdp.service.IUserInfoService;
 import com.hmdp.service.IUserService;
 import com.hmdp.service.PointsService;
 import com.hmdp.utils.UserHolder;
+import com.hmdp.utils.RedisConstants;
+import com.hmdp.utils.SystemConstants;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import java.io.File;
 
 /**
  * <p>
@@ -39,6 +43,9 @@ public class UserController {
 
     @Resource
     private PointsService pointsService;
+
+    @Resource
+    private StringRedisTemplate redis;
 
     /**
      * 发送手机验证码
@@ -68,10 +75,41 @@ public class UserController {
     }
 
     @GetMapping("/me")
-    public Result me(){
-        // 获取当前登录的用户并返回
-        UserDTO user = UserHolder.getUser();
-        return Result.ok(user);
+    public Result me(HttpServletRequest request){
+        User user = userService.getById(UserHolder.getUser().getId());
+        if (user == null) return Result.fail("用户不存在");
+        UserDTO dto = BeanUtil.copyProperties(user, UserDTO.class);
+        String token = request.getHeader("authorization");
+        if (token != null && !token.isEmpty()) {
+            redis.opsForHash().put(RedisConstants.LOGIN_USER_KEY + token, "nickName", dto.getNickName() == null ? "" : dto.getNickName());
+            redis.opsForHash().put(RedisConstants.LOGIN_USER_KEY + token, "icon", dto.getIcon() == null ? "" : dto.getIcon());
+        }
+        return Result.ok(dto);
+    }
+
+    @PutMapping("/profile")
+    public Result updateProfile(@RequestBody ProfileRequest request, HttpServletRequest httpRequest) {
+        if (request == null || request.nickName == null || request.nickName.trim().isEmpty()
+                || request.nickName.trim().length() > 32 || request.nickName.chars().anyMatch(Character::isISOControl)) {
+            return Result.fail("昵称须为1至32个字符，且不能包含控制字符");
+        }
+        String icon = request.icon == null ? "" : request.icon;
+        Long id = UserHolder.getUser().getId();
+        User current = userService.getById(id);
+        if (current == null) return Result.fail("用户不存在");
+        if (!icon.equals(current.getIcon()) && !icon.isEmpty() && (!icon.matches("/blogs/[0-9]{1,2}/[0-9]{1,2}/[0-9a-f-]{36}\\.(jpg|png|gif)")
+                || !new File(SystemConstants.IMAGE_UPLOAD_DIR, icon).isFile())) {
+            return Result.fail("头像无效，请重新上传");
+        }
+        boolean updated = userService.update().eq("id", id).set("nick_name", request.nickName.trim()).set("icon", icon).update();
+        if (!updated) return Result.fail("保存失败，请重试");
+        redis.delete(RedisConstants.CACHE_BLOG_USER_KEY + id);
+        return me(httpRequest);
+    }
+
+    public static class ProfileRequest {
+        public String nickName;
+        public String icon;
     }
 
     @GetMapping("/info/{id}")

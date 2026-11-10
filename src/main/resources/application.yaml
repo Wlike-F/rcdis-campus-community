@@ -4,7 +4,7 @@ spring:
   mail:
     host: smtp.163.com
     port: 465
-    username: ${MAIL_USERNAME:wlikef5213@163.com}
+    username: ${MAIL_USERNAME:}
     password: ${MAIL_AUTH_CODE:}
     properties:
       mail.smtp.auth: true
